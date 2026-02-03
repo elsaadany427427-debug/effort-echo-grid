@@ -3,9 +3,10 @@ import { Plus, Target } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
-import { GoalProgress } from '@/components/dashboard/GoalProgress';
+import { GoalCards } from '@/components/dashboard/GoalCards';
 import { TaskTable } from '@/components/dashboard/TaskTable';
 import { TaskModal } from '@/components/dashboard/TaskModal';
+import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
 import { Button } from '@/components/ui/button';
@@ -19,14 +20,18 @@ const Index = () => {
     addTask,
     updateTask,
     deleteTask,
+    saveGoal,
+    deleteGoal,
     computeMetrics,
     computeGoalProgress,
     getAlerts,
     isLoaded
   } = useDashboardData();
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingGoal, setEditingGoal] = useState<GoalWithMeta | null>(null);
 
   if (!isLoaded) {
     return (
@@ -42,12 +47,12 @@ const Index = () => {
 
   const handleAddTask = () => {
     setEditingTask(null);
-    setModalOpen(true);
+    setTaskModalOpen(true);
   };
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
-    setModalOpen(true);
+    setTaskModalOpen(true);
   };
 
   const handleSaveTask = (taskData: Omit<Task, 'id'> | Task) => {
@@ -60,6 +65,16 @@ const Index = () => {
 
   const handleToggleComplete = (id: string, completed: boolean) => {
     updateTask(id, { completed });
+  };
+
+  const handleAddGoal = () => {
+    setEditingGoal(null);
+    setGoalModalOpen(true);
+  };
+
+  const handleEditGoal = (goal: GoalWithMeta) => {
+    setEditingGoal(goal);
+    setGoalModalOpen(true);
   };
 
   return (
@@ -97,15 +112,15 @@ const Index = () => {
           daysUntilTarget={metrics.daysUntilTarget}
         />
 
-        {/* Charts & Goals */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <DashboardCharts tasks={tasks} />
-          </div>
-          <div>
-            <GoalProgress goals={goalsWithProgress} />
-          </div>
-        </div>
+        {/* Goal Cards */}
+        <GoalCards 
+          goals={goalsWithProgress} 
+          onEditGoal={handleEditGoal}
+          onAddGoal={handleAddGoal}
+        />
+
+        {/* Charts */}
+        <DashboardCharts tasks={tasks} />
 
         {/* Task Table */}
         <TaskTable
@@ -117,10 +132,19 @@ const Index = () => {
 
         {/* Task Modal */}
         <TaskModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          open={taskModalOpen}
+          onClose={() => setTaskModalOpen(false)}
           onSave={handleSaveTask}
           task={editingTask}
+        />
+
+        {/* Goal Modal */}
+        <GoalModal
+          open={goalModalOpen}
+          onClose={() => setGoalModalOpen(false)}
+          onSave={saveGoal}
+          onDelete={deleteGoal}
+          goal={editingGoal}
         />
       </div>
     </div>
