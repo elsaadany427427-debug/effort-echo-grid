@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Edit2, Trash2, Check, X } from 'lucide-react';
-import { Task, TASK_CATEGORIES } from '@/types/dashboard';
+import { Task } from '@/types/dashboard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -42,6 +42,26 @@ const categoryColors: Record<string, string> = {
   'Documentation': 'bg-chart-emerald/20 text-emerald-400',
   'Code Review': 'bg-purple-500/20 text-purple-400',
   'Bug Fixes': 'bg-orange-500/20 text-orange-400',
+};
+
+const getRandomColor = (category: string) => {
+  const colors = [
+    'bg-chart-rose/20 text-rose-400',
+    'bg-chart-amber/20 text-amber-400',
+    'bg-chart-teal/20 text-teal-400',
+    'bg-chart-violet/20 text-violet-400',
+    'bg-chart-blue/20 text-sky-400',
+    'bg-chart-emerald/20 text-emerald-400',
+    'bg-purple-500/20 text-purple-400',
+    'bg-orange-500/20 text-orange-400',
+  ];
+  // Use category name to generate consistent color
+  const index = category.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+  return colors[index];
+};
+
+const getCategoryColor = (category: string) => {
+  return categoryColors[category] || getRandomColor(category);
 };
 
 export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTableProps) {
@@ -110,7 +130,7 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
                     {task.name}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={cn("border-0", categoryColors[task.category])}>
+                    <Badge variant="secondary" className={cn("border-0", getCategoryColor(task.category))}>
                       {task.category}
                     </Badge>
                   </TableCell>

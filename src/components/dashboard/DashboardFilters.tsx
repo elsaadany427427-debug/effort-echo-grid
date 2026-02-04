@@ -1,4 +1,4 @@
-import { FilterPeriod, FilterCategory, TASK_CATEGORIES, DashboardFilters } from '@/types/dashboard';
+import { FilterPeriod, FilterCategory, DashboardFilters } from '@/types/dashboard';
 import {
   Select,
   SelectContent,
@@ -10,9 +10,10 @@ import {
 interface DashboardFiltersProps {
   filters: DashboardFilters;
   onFiltersChange: (filters: DashboardFilters) => void;
+  categories: string[];
 }
 
-export function DashboardFiltersComponent({ filters, onFiltersChange }: DashboardFiltersProps) {
+export function DashboardFiltersComponent({ filters, onFiltersChange, categories }: DashboardFiltersProps) {
   return (
     <div className="flex items-center gap-3">
       <Select
@@ -38,7 +39,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
         </SelectTrigger>
         <SelectContent className="bg-popover border-border">
           <SelectItem value="all">All Categories</SelectItem>
-          {TASK_CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
           ))}
         </SelectContent>

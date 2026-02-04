@@ -2,23 +2,13 @@ export interface Task {
   id: string;
   name: string;
   date: string;
-  category: TaskCategory;
+  category: string;
   hours: number;
   aiUsed: boolean;
   ownership: boolean;
   outcome: string;
   completed: boolean;
 }
-
-export type TaskCategory = 
-  | 'Angular'
-  | 'Security'
-  | 'Training'
-  | 'Meetings'
-  | 'Skills'
-  | 'Documentation'
-  | 'Code Review'
-  | 'Bug Fixes';
 
 export interface Goal {
   id: string;
@@ -29,23 +19,12 @@ export interface Goal {
 }
 
 export type FilterPeriod = 'week' | 'month' | 'all';
-export type FilterCategory = TaskCategory | 'all';
+export type FilterCategory = string;
 
 export interface DashboardFilters {
   period: FilterPeriod;
   category: FilterCategory;
 }
-
-export const TASK_CATEGORIES: TaskCategory[] = [
-  'Angular',
-  'Security',
-  'Training',
-  'Meetings',
-  'Skills',
-  'Documentation',
-  'Code Review',
-  'Bug Fixes'
-];
 
 export const DEFAULT_GOALS: Goal[] = [
   { id: '1', title: 'Logged Effort', targetValue: 40, currentProgress: 0, unit: 'hours' },

@@ -1,11 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Task, Goal, DashboardFilters, TaskCategory } from '@/types/dashboard';
+import { Task, Goal, DashboardFilters } from '@/types/dashboard';
 import { GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 const TASKS_KEY = 'dashboard_tasks';
 const GOALS_KEY = 'dashboard_goals_v2';
+const CATEGORIES_KEY = 'dashboard_categories';
 
+const DEFAULT_CATEGORIES = [
+  'Angular',
+  'Security',
+  'Training',
+  'Meetings',
+  'Skills',
+  'Documentation',
+  'Code Review',
+  'Bug Fixes'
+];
 const DEFAULT_GOALS: GoalWithMeta[] = [
   { id: '1', title: 'Logged Effort', targetValue: 880, currentProgress: 0, unit: 'hours', description: '800-960 hours by 06-2026', linkedCategory: 'all' },
   { id: '2', title: 'Effective Meetings', targetValue: 48, currentProgress: 0, unit: 'stories', description: 'Prepared meetings with follow-ups', linkedCategory: 'Meetings' },
@@ -20,6 +31,7 @@ const DEFAULT_GOALS: GoalWithMeta[] = [
 export function useDashboardData() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<GoalWithMeta[]>([]);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [filters, setFilters] = useState<DashboardFilters>({ period: 'week', category: 'all' });
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -27,9 +39,11 @@ export function useDashboardData() {
   useEffect(() => {
     const savedTasks = localStorage.getItem(TASKS_KEY);
     const savedGoals = localStorage.getItem(GOALS_KEY);
+    const savedCategories = localStorage.getItem(CATEGORIES_KEY);
     
     setTasks(savedTasks ? JSON.parse(savedTasks) : []);
     setGoals(savedGoals ? JSON.parse(savedGoals) : DEFAULT_GOALS);
+    setCategories(savedCategories ? JSON.parse(savedCategories) : DEFAULT_CATEGORIES);
     setIsLoaded(true);
   }, []);
 
@@ -46,6 +60,13 @@ export function useDashboardData() {
       localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
     }
   }, [goals, isLoaded]);
+
+  // Save categories to localStorage
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    }
+  }, [categories, isLoaded]);
 
   // Filter tasks by period and category
   const getFilteredTasks = useCallback(() => {
@@ -115,20 +136,32 @@ export function useDashboardData() {
     }
   }, [goals, addGoal, updateGoal]);
 
-  // Computed metrics
+  // Category CRUD
+  const saveCategory = useCallback((oldName: string | null, newName: string) => {
+    if (oldName) {
+      // Update existing category
+      setCategories(prev => prev.map(cat => cat === oldName ? newName : cat));
+      // Update tasks that use this category
+      setTasks(prev => prev.map(task => 
+        task.category === oldName ? { ...task, category: newName } : task
+      ));
+    } else {
+      // Add new category
+      setCategories(prev => [...prev, newName]);
+    }
+  }, []);
+
+  const deleteCategory = useCallback((name: string) => {
+    setCategories(prev => prev.filter(cat => cat !== name));
+  }, []);
+
+  // Computed metrics - now respects filters
   const computeMetrics = useCallback(() => {
     const filtered = getFilteredTasks();
-    const weeklyTasks = tasks.filter(task => {
-      const now = new Date();
-      const taskDate = parseISO(task.date);
-      return isWithinInterval(taskDate, {
-        start: startOfWeek(now, { weekStartsOn: 1 }),
-        end: endOfWeek(now, { weekStartsOn: 1 })
-      });
-    });
-
-    const totalHoursWeekly = weeklyTasks.reduce((sum, t) => sum + t.hours, 0);
-    const aiTimeSaved = weeklyTasks.filter(t => t.aiUsed).reduce((sum, t) => sum + t.hours * 0.3, 0);
+    
+    // Calculate hours based on filtered tasks (respects period and category filters)
+    const totalHoursFiltered = filtered.reduce((sum, t) => sum + t.hours, 0);
+    const aiTimeSavedFiltered = filtered.filter(t => t.aiUsed).reduce((sum, t) => sum + t.hours * 0.3, 0);
     const activeStories = tasks.filter(t => t.ownership && !t.completed).length;
     
     // Days until June 2026
@@ -136,8 +169,8 @@ export function useDashboardData() {
     const daysUntilTarget = Math.ceil((targetDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
     return {
-      totalHoursWeekly,
-      aiTimeSaved,
+      totalHoursFiltered,
+      aiTimeSavedFiltered,
       activeStories,
       daysUntilTarget,
       filteredTasks: filtered,
@@ -210,6 +243,7 @@ export function useDashboardData() {
   return {
     tasks,
     goals,
+    categories,
     filters,
     setFilters,
     addTask,
@@ -217,6 +251,8 @@ export function useDashboardData() {
     deleteTask,
     saveGoal,
     deleteGoal,
+    saveCategory,
+    deleteCategory,
     computeMetrics,
     computeGoalProgress,
     getAlerts,

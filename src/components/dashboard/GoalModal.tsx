@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Goal, TaskCategory, TASK_CATEGORIES } from '@/types/dashboard';
+import { Goal } from '@/types/dashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ import {
 export interface GoalWithMeta extends Goal {
   description?: string;
   icon?: string;
-  linkedCategory?: TaskCategory | 'ownership' | 'ai' | 'all';
+  linkedCategory?: string;
 }
 
 interface GoalModalProps {
@@ -31,16 +31,20 @@ interface GoalModalProps {
   onSave: (goal: GoalWithMeta) => void;
   onDelete?: (id: string) => void;
   goal?: GoalWithMeta | null;
+  categories?: string[];
 }
 
-const LINK_OPTIONS = [
+const BASE_LINK_OPTIONS = [
   { value: 'all', label: 'All Tasks (Hours)' },
   { value: 'ownership', label: 'Ownership Tasks' },
   { value: 'ai', label: 'AI Assisted Tasks' },
-  ...TASK_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 ];
 
-export function GoalModal({ open, onClose, onSave, onDelete, goal }: GoalModalProps) {
+export function GoalModal({ open, onClose, onSave, onDelete, goal, categories = [] }: GoalModalProps) {
+  const linkOptions = [
+    ...BASE_LINK_OPTIONS,
+    ...categories.map(cat => ({ value: cat, label: cat }))
+  ];
   const [formData, setFormData] = useState<GoalWithMeta>({
     id: '',
     title: '',
@@ -169,13 +173,13 @@ export function GoalModal({ open, onClose, onSave, onDelete, goal }: GoalModalPr
             <Label htmlFor="linkedCategory">Linked To</Label>
             <Select
               value={formData.linkedCategory || 'all'}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, linkedCategory: value as any }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, linkedCategory: value }))}
             >
               <SelectTrigger className="bg-secondary/50 border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
-                {LINK_OPTIONS.map((opt) => (
+                {linkOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
