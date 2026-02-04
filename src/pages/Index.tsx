@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Target } from 'lucide-react';
+import { Plus, Target, Settings } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
@@ -7,6 +7,7 @@ import { GoalCards } from '@/components/dashboard/GoalCards';
 import { TaskTable } from '@/components/dashboard/TaskTable';
 import { TaskModal } from '@/components/dashboard/TaskModal';
 import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
+import { CategoryModal } from '@/components/dashboard/CategoryModal';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Task } from '@/types/dashboard';
 const Index = () => {
   const {
     tasks,
+    categories,
     filters,
     setFilters,
     addTask,
@@ -22,6 +24,8 @@ const Index = () => {
     deleteTask,
     saveGoal,
     deleteGoal,
+    saveCategory,
+    deleteCategory,
     computeMetrics,
     computeGoalProgress,
     getAlerts,
@@ -32,6 +36,7 @@ const Index = () => {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingGoal, setEditingGoal] = useState<GoalWithMeta | null>(null);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   if (!isLoaded) {
     return (
@@ -44,6 +49,8 @@ const Index = () => {
   const metrics = computeMetrics();
   const goalsWithProgress = computeGoalProgress();
   const alerts = getAlerts();
+  
+  const periodLabel = filters.period === 'week' ? 'Weekly' : filters.period === 'month' ? 'Monthly' : 'All Time';
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -93,7 +100,15 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
+            <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} categories={categories} />
+            <Button 
+              onClick={() => setCategoryModalOpen(true)} 
+              variant="outline" 
+              size="icon"
+              title="Manage Categories"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25">
               <Plus className="h-4 w-4 mr-2" />
               Add Task
@@ -106,10 +121,11 @@ const Index = () => {
 
         {/* Metrics Row */}
         <MetricsCards
-          totalHoursWeekly={metrics.totalHoursWeekly}
-          aiTimeSaved={metrics.aiTimeSaved}
+          totalHoursFiltered={metrics.totalHoursFiltered}
+          aiTimeSavedFiltered={metrics.aiTimeSavedFiltered}
           activeStories={metrics.activeStories}
           daysUntilTarget={metrics.daysUntilTarget}
+          periodLabel={periodLabel}
         />
 
         {/* Goal Cards */}
@@ -136,6 +152,7 @@ const Index = () => {
           onClose={() => setTaskModalOpen(false)}
           onSave={handleSaveTask}
           task={editingTask}
+          categories={categories}
         />
 
         {/* Goal Modal */}
@@ -145,6 +162,16 @@ const Index = () => {
           onSave={saveGoal}
           onDelete={deleteGoal}
           goal={editingGoal}
+          categories={categories}
+        />
+
+        {/* Category Modal */}
+        <CategoryModal
+          open={categoryModalOpen}
+          onClose={() => setCategoryModalOpen(false)}
+          categories={categories}
+          onSaveCategory={saveCategory}
+          onDeleteCategory={deleteCategory}
         />
       </div>
     </div>

@@ -2,38 +2,38 @@ import { Clock, Zap, BookOpen, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MetricsCardsProps {
-  totalHoursWeekly: number;
-  aiTimeSaved: number;
+  totalHoursFiltered: number;
+  aiTimeSavedFiltered: number;
   activeStories: number;
   daysUntilTarget: number;
+  periodLabel: string;
 }
 
 export function MetricsCards({ 
-  totalHoursWeekly, 
-  aiTimeSaved, 
+  totalHoursFiltered, 
+  aiTimeSavedFiltered, 
   activeStories, 
-  daysUntilTarget 
+  daysUntilTarget,
+  periodLabel
 }: MetricsCardsProps) {
-  const isHoursOnTrack = totalHoursWeekly >= 25 && totalHoursWeekly <= 40;
-
   const metrics = [
     {
-      title: 'Weekly Hours',
-      value: totalHoursWeekly.toFixed(1),
+      title: `${periodLabel} Hours`,
+      value: totalHoursFiltered.toFixed(1),
       suffix: 'h',
       icon: Clock,
-      color: isHoursOnTrack ? 'text-chart-teal' : 'text-status-warning',
-      bgColor: isHoursOnTrack ? 'bg-chart-teal/10' : 'bg-status-warning/10',
-      description: isHoursOnTrack ? 'On track (25-40h)' : 'Outside target range'
+      color: 'text-chart-teal',
+      bgColor: 'bg-chart-teal/10',
+      description: `Total logged (${periodLabel.toLowerCase()})`
     },
     {
       title: 'AI Time Saved',
-      value: aiTimeSaved.toFixed(1),
+      value: aiTimeSavedFiltered.toFixed(1),
       suffix: 'h',
       icon: Zap,
       color: 'text-chart-amber',
       bgColor: 'bg-chart-amber/10',
-      description: '30% efficiency boost'
+      description: `30% efficiency (${periodLabel.toLowerCase()})`
     },
     {
       title: 'Active Stories',

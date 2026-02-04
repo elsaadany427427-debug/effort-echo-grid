@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Task, TaskCategory, TASK_CATEGORIES } from '@/types/dashboard';
+import { Task } from '@/types/dashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,13 +26,15 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (task: Omit<Task, 'id'> | Task) => void;
   task?: Task | null;
+  categories: string[];
 }
 
-export function TaskModal({ open, onClose, onSave, task }: TaskModalProps) {
+export function TaskModal({ open, onClose, onSave, task, categories }: TaskModalProps) {
+  const defaultCategory = categories[0] || 'General';
   const [formData, setFormData] = useState({
     name: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    category: 'Angular' as TaskCategory,
+    category: defaultCategory,
     hours: 1,
     aiUsed: false,
     ownership: false,
@@ -56,7 +58,7 @@ export function TaskModal({ open, onClose, onSave, task }: TaskModalProps) {
       setFormData({
         name: '',
         date: format(new Date(), 'yyyy-MM-dd'),
-        category: 'Angular',
+        category: defaultCategory,
         hours: 1,
         aiUsed: false,
         ownership: false,
@@ -116,10 +118,9 @@ export function TaskModal({ open, onClose, onSave, task }: TaskModalProps) {
                 id="hours"
                 type="number"
                 min="0.25"
-                max="12"
                 step="0.25"
                 value={formData.hours}
-                onChange={(e) => setFormData(prev => ({ ...prev, hours: parseFloat(e.target.value) }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, hours: parseFloat(e.target.value) || 0 }))}
                 required
                 className="bg-secondary/50 border-border"
               />
@@ -130,13 +131,13 @@ export function TaskModal({ open, onClose, onSave, task }: TaskModalProps) {
             <Label htmlFor="category">Category</Label>
             <Select
               value={formData.category}
-              onValueChange={(value: TaskCategory) => setFormData(prev => ({ ...prev, category: value }))}
+              onValueChange={(value: string) => setFormData(prev => ({ ...prev, category: value }))}
             >
               <SelectTrigger className="bg-secondary/50 border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
-                {TASK_CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>
