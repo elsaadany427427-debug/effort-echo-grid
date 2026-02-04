@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Target, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Target, Settings, Bell } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
@@ -8,7 +9,6 @@ import { TaskTable } from '@/components/dashboard/TaskTable';
 import { TaskModal } from '@/components/dashboard/TaskModal';
 import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { CategoryModal } from '@/components/dashboard/CategoryModal';
-import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
 import { Button } from '@/components/ui/button';
 import { Task } from '@/types/dashboard';
@@ -49,6 +49,7 @@ const Index = () => {
   const metrics = computeMetrics();
   const goalsWithProgress = computeGoalProgress();
   const alerts = getAlerts();
+  const alertCount = alerts.length;
   
   const periodLabel = filters.period === 'week' ? 'Weekly' : filters.period === 'month' ? 'Monthly' : 'All Time';
 
@@ -101,6 +102,21 @@ const Index = () => {
           
           <div className="flex items-center gap-3">
             <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} categories={categories} />
+            <Link to="/notifications">
+              <Button 
+                variant="outline" 
+                size="icon"
+                title="View Notifications"
+                className="relative"
+              >
+                <Bell className="h-4 w-4" />
+                {alertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
+                    {alertCount}
+                  </span>
+                )}
+              </Button>
+            </Link>
             <Button 
               onClick={() => setCategoryModalOpen(true)} 
               variant="outline" 
@@ -115,9 +131,6 @@ const Index = () => {
             </Button>
           </div>
         </div>
-
-        {/* Alerts */}
-        {alerts.length > 0 && <AlertsPanel alerts={alerts} />}
 
         {/* Metrics Row */}
         <MetricsCards
