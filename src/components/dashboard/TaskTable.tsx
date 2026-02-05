@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { TaskPagination } from './TaskPagination';
 
 interface TaskTableProps {
   tasks: Task[];
@@ -55,7 +56,6 @@ const getRandomColor = (category: string) => {
     'bg-purple-500/20 text-purple-400',
     'bg-orange-500/20 text-orange-400',
   ];
-  // Use category name to generate consistent color
   const index = category.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
   return colors[index];
 };
@@ -67,12 +67,28 @@ const getCategoryColor = (category: string) => {
 export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTableProps) {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredTasks = tasks.filter(task => 
     task.name.toLowerCase().includes(search.toLowerCase()) ||
     task.category.toLowerCase().includes(search.toLowerCase()) ||
     task.outcome.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredTasks.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedTasks = filteredTasks.slice(startIndex, startIndex + pageSize);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const handleDelete = () => {
     if (deleteId) {
@@ -90,7 +106,7 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
           <Input
             placeholder="Search tasks..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 bg-secondary/50 border-border"
           />
         </div>
@@ -111,14 +127,14 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTasks.length === 0 ? (
+            {paginatedTasks.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No tasks found. Add your first task to get started!
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTasks.map((task) => (
+              paginatedTasks.map((task) => (
                 <TableRow key={task.id} className={cn(task.completed && "opacity-60")}>
                   <TableCell>
                     <Checkbox
@@ -178,6 +194,15 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
           </TableBody>
         </Table>
       </div>
+
+      <TaskPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={filteredTasks.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="bg-card border-border">

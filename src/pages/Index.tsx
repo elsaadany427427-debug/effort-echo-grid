@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Target, Settings, Bell } from 'lucide-react';
+ import { Plus, Settings, Bell } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
@@ -10,6 +10,7 @@ import { TaskModal } from '@/components/dashboard/TaskModal';
 import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { CategoryModal } from '@/components/dashboard/CategoryModal';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
+ import { ProjectHeader } from '@/components/dashboard/ProjectHeader';
 import { Button } from '@/components/ui/button';
 import { Task } from '@/types/dashboard';
 
@@ -90,15 +91,7 @@ const Index = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 glow-primary">
-              <Target className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Goal Tracker</h1>
-              <p className="text-sm text-muted-foreground">Software Engineer Performance Dashboard</p>
-            </div>
-          </div>
+           <ProjectHeader />
           
           <div className="flex items-center gap-3">
             <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} categories={categories} />
