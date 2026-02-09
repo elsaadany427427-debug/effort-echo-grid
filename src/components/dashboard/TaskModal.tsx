@@ -27,10 +27,12 @@ interface TaskModalProps {
   onSave: (task: Omit<Task, 'id'> | Task) => void;
   task?: Task | null;
   categories: string[];
+  projects: string[];
 }
 
-export function TaskModal({ open, onClose, onSave, task, categories }: TaskModalProps) {
+export function TaskModal({ open, onClose, onSave, task, categories, projects }: TaskModalProps) {
   const defaultCategory = categories[0] || 'General';
+  const defaultProject = projects[0] || 'Default';
   const [formData, setFormData] = useState({
     name: '',
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -40,6 +42,7 @@ export function TaskModal({ open, onClose, onSave, task, categories }: TaskModal
     ownership: false,
     outcome: '',
     completed: false,
+    projectName: defaultProject,
   });
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export function TaskModal({ open, onClose, onSave, task, categories }: TaskModal
         ownership: task.ownership,
         outcome: task.outcome,
         completed: task.completed,
+        projectName: task.projectName || defaultProject,
       });
     } else {
       setFormData({
@@ -64,6 +68,7 @@ export function TaskModal({ open, onClose, onSave, task, categories }: TaskModal
         ownership: false,
         outcome: '',
         completed: false,
+        projectName: defaultProject,
       });
     }
   }, [task, open]);
@@ -127,21 +132,40 @@ export function TaskModal({ open, onClose, onSave, task, categories }: TaskModal
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value: string) => setFormData(prev => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger className="bg-secondary/50 border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border">
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger className="bg-secondary/50 border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project">Project</Label>
+              <Select
+                value={formData.projectName}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, projectName: value }))}
+              >
+                <SelectTrigger className="bg-secondary/50 border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {projects.map((proj) => (
+                    <SelectItem key={proj} value={proj}>{proj}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

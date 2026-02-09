@@ -8,6 +8,7 @@ export interface Task {
   ownership: boolean;
   outcome: string;
   completed: boolean;
+  projectName: string;
 }
 
 export interface Goal {
@@ -18,12 +19,13 @@ export interface Goal {
   unit: 'hours' | 'stories' | '%';
 }
 
-export type FilterPeriod = 'week' | 'month' | 'all';
+export type FilterPeriod = 'day' | 'week' | 'month' | 'all';
 export type FilterCategory = string;
 
 export interface DashboardFilters {
   period: FilterPeriod;
   category: FilterCategory;
+  selectedDate?: string;
 }
 
 export const DEFAULT_GOALS: Goal[] = [
