@@ -94,6 +94,7 @@ export type Database = {
           display_name: string | null
           id: string
           project_name: string | null
+          target_date: string | null
           updated_at: string
           username: string | null
         }
@@ -103,6 +104,7 @@ export type Database = {
           display_name?: string | null
           id: string
           project_name?: string | null
+          target_date?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -112,8 +114,30 @@ export type Database = {
           display_name?: string | null
           id?: string
           project_name?: string | null
+          target_date?: string | null
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -129,6 +153,7 @@ export type Database = {
           name: string
           outcome: string
           ownership: boolean
+          project_name: string
           updated_at: string
           user_id: string
         }
@@ -143,6 +168,7 @@ export type Database = {
           name: string
           outcome?: string
           ownership?: boolean
+          project_name?: string
           updated_at?: string
           user_id: string
         }
@@ -157,6 +183,7 @@ export type Database = {
           name?: string
           outcome?: string
           ownership?: boolean
+          project_name?: string
           updated_at?: string
           user_id?: string
         }

@@ -1,5 +1,9 @@
-import { Clock, Zap, BookOpen, Target } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, Zap, BookOpen, Target, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface MetricsCardsProps {
   totalHoursFiltered: number;
@@ -7,6 +11,8 @@ interface MetricsCardsProps {
   activeStories: number;
   daysUntilTarget: number;
   periodLabel: string;
+  targetDate: string;
+  onTargetDateChange: (date: string) => void;
 }
 
 export function MetricsCards({ 
@@ -14,8 +20,13 @@ export function MetricsCards({
   aiTimeSavedFiltered, 
   activeStories, 
   daysUntilTarget,
-  periodLabel
+  periodLabel,
+  targetDate,
+  onTargetDateChange,
 }: MetricsCardsProps) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const targetDateObj = parseISO(targetDate);
+
   const metrics = [
     {
       title: `${periodLabel} Hours`,
@@ -44,15 +55,6 @@ export function MetricsCards({
       bgColor: 'bg-chart-violet/10',
       description: 'Ownership tasks'
     },
-    {
-      title: 'Days to Goal',
-      value: daysUntilTarget.toString(),
-      suffix: '',
-      icon: Target,
-      color: 'text-chart-rose',
-      bgColor: 'bg-chart-rose/10',
-      description: 'Until June 2026'
-    }
   ];
 
   return (
@@ -74,6 +76,47 @@ export function MetricsCards({
           </div>
         </div>
       ))}
+
+      {/* Days to Goal - editable */}
+      <div className="metric-card animate-fade-in">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-medium text-muted-foreground">Days to Goal</p>
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={targetDateObj}
+                    onSelect={(date) => {
+                      if (date) {
+                        onTargetDateChange(format(date, 'yyyy-MM-dd'));
+                        setDatePickerOpen(false);
+                      }
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <p className={cn("text-3xl font-bold mt-1 text-chart-rose")}>
+              {daysUntilTarget}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Until {format(targetDateObj, 'MMM yyyy')}
+            </p>
+          </div>
+          <div className={cn("p-3 rounded-lg bg-chart-rose/10")}>
+            <Target className={cn("h-5 w-5 text-chart-rose")} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

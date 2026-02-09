@@ -12,6 +12,8 @@ export function useDashboardData() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<GoalWithMeta[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [projects, setProjects] = useState<string[]>([]);
+  const [targetDate, setTargetDateState] = useState<string>('2026-06-01');
   const [filters, setFilters] = useState<DashboardFilters>({ period: 'week', category: 'all' });
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -21,27 +23,16 @@ export function useDashboardData() {
 
     const loadData = async () => {
       try {
-        // Fetch tasks
-        const { data: tasksData } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
+        const [tasksRes, goalsRes, categoriesRes, projectsRes, profileRes] = await Promise.all([
+          supabase.from('tasks').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+          supabase.from('goals').select('*').eq('user_id', user.id),
+          supabase.from('categories').select('*').eq('user_id', user.id),
+          supabase.from('projects').select('*').eq('user_id', user.id),
+          supabase.from('profiles').select('target_date').eq('id', user.id).single(),
+        ]);
 
-        // Fetch goals
-        const { data: goalsData } = await supabase
-          .from('goals')
-          .select('*')
-          .eq('user_id', user.id);
-
-        // Fetch categories
-        const { data: categoriesData } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (tasksData) {
-          setTasks(tasksData.map(t => ({
+        if (tasksRes.data) {
+          setTasks(tasksRes.data.map(t => ({
             id: t.id,
             name: t.name,
             date: t.date,
@@ -50,12 +41,13 @@ export function useDashboardData() {
             aiUsed: t.ai_used,
             ownership: t.ownership,
             outcome: t.outcome,
-            completed: t.completed
+            completed: t.completed,
+            projectName: (t as any).project_name || '',
           })));
         }
 
-        if (goalsData) {
-          setGoals(goalsData.map(g => ({
+        if (goalsRes.data) {
+          setGoals(goalsRes.data.map(g => ({
             id: g.id,
             title: g.title,
             targetValue: Number(g.target_value),
@@ -66,8 +58,16 @@ export function useDashboardData() {
           })));
         }
 
-        if (categoriesData) {
-          setCategories(categoriesData.map(c => c.name));
+        if (categoriesRes.data) {
+          setCategories(categoriesRes.data.map(c => c.name));
+        }
+
+        if (projectsRes.data) {
+          setProjects(projectsRes.data.map((p: any) => p.name));
+        }
+
+        if (profileRes.data) {
+          setTargetDateState((profileRes.data as any).target_date || '2026-06-01');
         }
 
         setIsLoaded(true);
@@ -84,7 +84,7 @@ export function useDashboardData() {
     loadData();
   }, [user, toast]);
 
-  // Filter tasks by period and category
+  // Filter tasks
   const getFilteredTasks = useCallback(() => {
     const now = new Date();
     
@@ -92,7 +92,10 @@ export function useDashboardData() {
       const taskDate = parseISO(task.date);
       
       let inPeriod = true;
-      if (filters.period === 'week') {
+      if (filters.period === 'day') {
+        const selected = filters.selectedDate || format(now, 'yyyy-MM-dd');
+        inPeriod = task.date === selected;
+      } else if (filters.period === 'week') {
         inPeriod = isWithinInterval(taskDate, {
           start: startOfWeek(now, { weekStartsOn: 1 }),
           end: endOfWeek(now, { weekStartsOn: 1 })
@@ -125,7 +128,8 @@ export function useDashboardData() {
         ai_used: task.aiUsed,
         ownership: task.ownership,
         outcome: task.outcome,
-        completed: task.completed
+        completed: task.completed,
+        project_name: task.projectName,
       })
       .select()
       .single();
@@ -145,9 +149,52 @@ export function useDashboardData() {
         aiUsed: data.ai_used,
         ownership: data.ownership,
         outcome: data.outcome,
-        completed: data.completed
+        completed: data.completed,
+        projectName: (data as any).project_name || '',
       }, ...prev]);
     }
+  }, [user, toast]);
+
+  const bulkAddTasks = useCallback(async (tasksToAdd: Omit<Task, 'id'>[]) => {
+    if (!user) return 0;
+
+    const rows = tasksToAdd.map(t => ({
+      user_id: user.id,
+      name: t.name,
+      date: t.date,
+      category: t.category,
+      hours: t.hours,
+      ai_used: t.aiUsed,
+      ownership: t.ownership,
+      outcome: t.outcome,
+      completed: t.completed,
+      project_name: t.projectName,
+    }));
+
+    const { data, error } = await supabase.from('tasks').insert(rows).select();
+
+    if (error) {
+      toast({ title: 'Error importing tasks', variant: 'destructive' });
+      return 0;
+    }
+
+    if (data) {
+      const newTasks: Task[] = data.map(d => ({
+        id: d.id,
+        name: d.name,
+        date: d.date,
+        category: d.category,
+        hours: Number(d.hours),
+        aiUsed: d.ai_used,
+        ownership: d.ownership,
+        outcome: d.outcome,
+        completed: d.completed,
+        projectName: (d as any).project_name || '',
+      }));
+      setTasks(prev => [...newTasks, ...prev]);
+      return newTasks.length;
+    }
+    return 0;
   }, [user, toast]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
@@ -160,11 +207,9 @@ export function useDashboardData() {
     if (updates.ownership !== undefined) dbUpdates.ownership = updates.ownership;
     if (updates.outcome !== undefined) dbUpdates.outcome = updates.outcome;
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+    if (updates.projectName !== undefined) dbUpdates.project_name = updates.projectName;
 
-    const { error } = await supabase
-      .from('tasks')
-      .update(dbUpdates)
-      .eq('id', id);
+    const { error } = await supabase.from('tasks').update(dbUpdates).eq('id', id);
 
     if (error) {
       toast({ title: 'Error updating task', variant: 'destructive' });
@@ -177,10 +222,7 @@ export function useDashboardData() {
   }, [toast]);
 
   const deleteTask = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('tasks').delete().eq('id', id);
 
     if (error) {
       toast({ title: 'Error deleting task', variant: 'destructive' });
@@ -248,10 +290,7 @@ export function useDashboardData() {
   }, [user, goals, toast]);
 
   const deleteGoal = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('goals')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('goals').delete().eq('id', id);
 
     if (error) {
       toast({ title: 'Error deleting goal', variant: 'destructive' });
@@ -266,7 +305,6 @@ export function useDashboardData() {
     if (!user) return;
 
     if (oldName) {
-      // Find category ID and update
       const { data: catData } = await supabase
         .from('categories')
         .select('id')
@@ -275,17 +313,8 @@ export function useDashboardData() {
         .maybeSingle();
 
       if (catData) {
-        await supabase
-          .from('categories')
-          .update({ name: newName })
-          .eq('id', catData.id);
-
-        // Update tasks with old category name
-        await supabase
-          .from('tasks')
-          .update({ category: newName })
-          .eq('user_id', user.id)
-          .eq('category', oldName);
+        await supabase.from('categories').update({ name: newName }).eq('id', catData.id);
+        await supabase.from('tasks').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
 
         setCategories(prev => prev.map(cat => cat === oldName ? newName : cat));
         setTasks(prev => prev.map(task => 
@@ -316,14 +345,74 @@ export function useDashboardData() {
       .maybeSingle();
 
     if (catData) {
-      await supabase
-        .from('categories')
-        .delete()
-        .eq('id', catData.id);
-
+      await supabase.from('categories').delete().eq('id', catData.id);
       setCategories(prev => prev.filter(cat => cat !== name));
     }
   }, [user]);
+
+  // Project CRUD
+  const saveProject = useCallback(async (oldName: string | null, newName: string) => {
+    if (!user) return;
+
+    if (oldName) {
+      const { data: projData } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', oldName)
+        .maybeSingle();
+
+      if (projData) {
+        await supabase.from('projects').update({ name: newName }).eq('id', (projData as any).id);
+        await supabase.from('tasks').update({ project_name: newName }).eq('user_id', user.id).eq('project_name', oldName);
+        setProjects(prev => prev.map(p => p === oldName ? newName : p));
+        setTasks(prev => prev.map(t => t.projectName === oldName ? { ...t, projectName: newName } : t));
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({ user_id: user.id, name: newName })
+        .select()
+        .single();
+
+      if (!error && data) {
+        setProjects(prev => [...prev, newName]);
+      }
+    }
+  }, [user]);
+
+  const deleteProject = useCallback(async (name: string) => {
+    if (!user) return;
+
+    const { data: projData } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('name', name)
+      .maybeSingle();
+
+    if (projData) {
+      await supabase.from('projects').delete().eq('id', (projData as any).id);
+      setProjects(prev => prev.filter(p => p !== name));
+    }
+  }, [user]);
+
+  // Update target date
+  const updateTargetDate = useCallback(async (date: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ target_date: date } as any)
+      .eq('id', user.id);
+
+    if (error) {
+      toast({ title: 'Error updating target date', variant: 'destructive' });
+      return;
+    }
+
+    setTargetDateState(date);
+  }, [user, toast]);
 
   // Computed metrics
   const computeMetrics = useCallback(() => {
@@ -333,8 +422,8 @@ export function useDashboardData() {
     const aiTimeSavedFiltered = filtered.filter(t => t.aiUsed).reduce((sum, t) => sum + t.hours * 0.3, 0);
     const activeStories = tasks.filter(t => t.ownership && !t.completed).length;
     
-    const targetDate = new Date('2026-06-01');
-    const daysUntilTarget = Math.ceil((targetDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const target = new Date(targetDate);
+    const daysUntilTarget = Math.ceil((target.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
     return {
       totalHoursFiltered,
@@ -344,7 +433,7 @@ export function useDashboardData() {
       filteredTasks: filtered,
       allTasks: tasks
     };
-  }, [tasks, getFilteredTasks]);
+  }, [tasks, getFilteredTasks, targetDate]);
 
   // Compute goal progress
   const computeGoalProgress = useCallback((): GoalWithMeta[] => {
@@ -411,15 +500,21 @@ export function useDashboardData() {
     tasks,
     goals,
     categories,
+    projects,
+    targetDate,
     filters,
     setFilters,
     addTask,
+    bulkAddTasks,
     updateTask,
     deleteTask,
     saveGoal,
     deleteGoal,
     saveCategory,
     deleteCategory,
+    saveProject,
+    deleteProject,
+    updateTargetDate,
     computeMetrics,
     computeGoalProgress,
     getAlerts,

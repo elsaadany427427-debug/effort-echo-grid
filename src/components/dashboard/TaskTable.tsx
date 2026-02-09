@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Search, Edit2, Trash2, Check, X } from 'lucide-react';
+import { Edit2, Trash2, Check, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Task } from '@/types/dashboard';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +25,18 @@ import {
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { TaskPagination } from './TaskPagination';
+import { TaskTableToolbar } from './TaskTableToolbar';
 
 interface TaskTableProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
+  onImport: (tasks: Omit<Task, 'id'>[]) => Promise<number>;
 }
+
+type SortColumn = 'name' | 'category' | 'projectName' | 'hours' | 'date';
+type SortDir = 'asc' | 'desc';
 
 const categoryColors: Record<string, string> = {
   'Angular': 'bg-chart-rose/20 text-rose-400',
@@ -64,21 +68,37 @@ const getCategoryColor = (category: string) => {
   return categoryColors[category] || getRandomColor(category);
 };
 
-export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTableProps) {
+export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete, onImport }: TaskTableProps) {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortCol, setSortCol] = useState<SortColumn>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const filteredTasks = tasks.filter(task => 
     task.name.toLowerCase().includes(search.toLowerCase()) ||
     task.category.toLowerCase().includes(search.toLowerCase()) ||
-    task.outcome.toLowerCase().includes(search.toLowerCase())
+    task.outcome.toLowerCase().includes(search.toLowerCase()) ||
+    task.projectName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredTasks.length / pageSize);
+  // Sorting
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    let cmp = 0;
+    switch (sortCol) {
+      case 'name': cmp = a.name.localeCompare(b.name); break;
+      case 'category': cmp = a.category.localeCompare(b.category); break;
+      case 'projectName': cmp = a.projectName.localeCompare(b.projectName); break;
+      case 'hours': cmp = a.hours - b.hours; break;
+      case 'date': cmp = a.date.localeCompare(b.date); break;
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const totalPages = Math.ceil(sortedTasks.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedTasks = filteredTasks.slice(startIndex, startIndex + pageSize);
+  const paginatedTasks = sortedTasks.slice(startIndex, startIndex + pageSize);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -97,30 +117,51 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
     }
   };
 
+  const toggleSort = (col: SortColumn) => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortColumn }) => {
+    if (sortCol !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" /> 
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
+
   return (
     <div className="glass-card rounded-xl p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Task Log</h3>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9 bg-secondary/50 border-border"
-          />
-        </div>
-      </div>
+      <TaskTableToolbar
+        search={search}
+        onSearchChange={handleSearchChange}
+        filteredTasks={filteredTasks}
+        onImport={onImport}
+      />
       
       <div className="rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-secondary/30 hover:bg-secondary/30">
               <TableHead className="w-12">Done</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Hours</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                <div className="flex items-center">Task <SortIcon col="name" /></div>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('category')}>
+                <div className="flex items-center">Category <SortIcon col="category" /></div>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('projectName')}>
+                <div className="flex items-center">Project <SortIcon col="projectName" /></div>
+              </TableHead>
+              <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort('hours')}>
+                <div className="flex items-center justify-end">Hours <SortIcon col="hours" /></div>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('date')}>
+                <div className="flex items-center">Date <SortIcon col="date" /></div>
+              </TableHead>
               <TableHead>AI</TableHead>
               <TableHead>Own</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -129,7 +170,7 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
           <TableBody>
             {paginatedTasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No tasks found. Add your first task to get started!
                 </TableCell>
               </TableRow>
@@ -149,6 +190,9 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
                     <Badge variant="secondary" className={cn("border-0", getCategoryColor(task.category))}>
                       {task.category}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {task.projectName || '—'}
                   </TableCell>
                   <TableCell className="text-right font-mono">{task.hours}h</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -199,7 +243,7 @@ export function TaskTable({ tasks, onEdit, onDelete, onToggleComplete }: TaskTab
         currentPage={currentPage}
         totalPages={totalPages}
         pageSize={pageSize}
-        totalItems={filteredTasks.length}
+        totalItems={sortedTasks.length}
         onPageChange={setCurrentPage}
         onPageSizeChange={handlePageSizeChange}
       />

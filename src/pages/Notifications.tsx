@@ -14,7 +14,7 @@ interface Alert {
 }
 
 const Notifications = () => {
-  const { tasks, computeGoalProgress, isLoaded } = useDashboardData();
+  const { tasks, targetDate: storedTargetDate, computeGoalProgress, isLoaded } = useDashboardData();
 
   if (!isLoaded) {
     return (
@@ -62,8 +62,8 @@ const Notifications = () => {
   });
 
   // Days until target
-  const targetDate = new Date('2026-06-01');
-  const daysUntilTarget = differenceInDays(targetDate, now);
+  const targetDateObj = new Date(storedTargetDate);
+  const daysUntilTarget = differenceInDays(targetDateObj, now);
 
   // Generate all alerts
   const alerts: Alert[] = [];
@@ -176,7 +176,7 @@ const Notifications = () => {
       id: 'deadline-near',
       type: 'warning',
       title: 'Deadline Approaching',
-      message: `Only ${daysUntilTarget} days until your June 2026 target date.`,
+      message: `Only ${daysUntilTarget} days until your target date.`,
       icon: Clock
     });
   }

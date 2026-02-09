@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
- import { Plus, Settings, Bell } from 'lucide-react';
+import { Plus, Settings, Bell } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
@@ -10,7 +10,7 @@ import { TaskModal } from '@/components/dashboard/TaskModal';
 import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { CategoryModal } from '@/components/dashboard/CategoryModal';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
- import { ProjectHeader } from '@/components/dashboard/ProjectHeader';
+import { ProjectHeader } from '@/components/dashboard/ProjectHeader';
 import { Button } from '@/components/ui/button';
 import { Task } from '@/types/dashboard';
 
@@ -18,15 +18,19 @@ const Index = () => {
   const {
     tasks,
     categories,
+    projects,
+    targetDate,
     filters,
     setFilters,
     addTask,
+    bulkAddTasks,
     updateTask,
     deleteTask,
     saveGoal,
     deleteGoal,
     saveCategory,
     deleteCategory,
+    updateTargetDate,
     computeMetrics,
     computeGoalProgress,
     getAlerts,
@@ -52,7 +56,7 @@ const Index = () => {
   const alerts = getAlerts();
   const alertCount = alerts.length;
   
-  const periodLabel = filters.period === 'week' ? 'Weekly' : filters.period === 'month' ? 'Monthly' : 'All Time';
+  const periodLabel = filters.period === 'day' ? 'Daily' : filters.period === 'week' ? 'Weekly' : filters.period === 'month' ? 'Monthly' : 'All Time';
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -91,7 +95,7 @@ const Index = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-           <ProjectHeader />
+          <ProjectHeader />
           
           <div className="flex items-center gap-3">
             <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} categories={categories} />
@@ -132,6 +136,8 @@ const Index = () => {
           activeStories={metrics.activeStories}
           daysUntilTarget={metrics.daysUntilTarget}
           periodLabel={periodLabel}
+          targetDate={targetDate}
+          onTargetDateChange={updateTargetDate}
         />
 
         {/* Goal Cards */}
@@ -141,8 +147,8 @@ const Index = () => {
           onAddGoal={handleAddGoal}
         />
 
-        {/* Charts */}
-        <DashboardCharts tasks={tasks} />
+        {/* Charts - now using filtered tasks */}
+        <DashboardCharts tasks={metrics.filteredTasks} />
 
         {/* Task Table */}
         <TaskTable
@@ -150,6 +156,7 @@ const Index = () => {
           onEdit={handleEditTask}
           onDelete={deleteTask}
           onToggleComplete={handleToggleComplete}
+          onImport={bulkAddTasks}
         />
 
         {/* Task Modal */}
@@ -159,6 +166,7 @@ const Index = () => {
           onSave={handleSaveTask}
           task={editingTask}
           categories={categories}
+          projects={projects}
         />
 
         {/* Goal Modal */}
