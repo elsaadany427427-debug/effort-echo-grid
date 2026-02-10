@@ -1,11 +1,21 @@
-import { Clock, Users, BookOpen, Zap, Award, Shield, Code, TrendingDown, Edit2, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, Users, BookOpen, Zap, Award, Shield, Code, TrendingDown, Edit2, Plus, Check, X, Trash2, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoalWithMeta } from './GoalModal';
+import { GoalSubtask } from '@/hooks/useDashboardData';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface GoalCardsProps {
   goals: GoalWithMeta[];
+  subtasks: GoalSubtask[];
   onEditGoal: (goal: GoalWithMeta) => void;
   onAddGoal: () => void;
+  onAddSubtask: (goalId: string, name: string) => void;
+  onUpdateSubtask: (id: string, updates: Partial<GoalSubtask>) => void;
+  onDeleteSubtask: (id: string) => void;
+  onCreateTaskFromSubtask: (subtask: GoalSubtask, goalTitle: string) => void;
 }
 
 const GOAL_ICONS: Record<string, typeof Clock> = {
@@ -44,7 +54,132 @@ function getProgressColor(progress: number, target: number): string {
   return 'bg-status-danger';
 }
 
-export function GoalCards({ goals, onEditGoal, onAddGoal }: GoalCardsProps) {
+function SubtaskList({ 
+  goalId, 
+  goalTitle,
+  subtasks, 
+  onAdd, 
+  onUpdate, 
+  onDelete, 
+  onCreateTask 
+}: { 
+  goalId: string; 
+  goalTitle: string;
+  subtasks: GoalSubtask[]; 
+  onAdd: (goalId: string, name: string) => void;
+  onUpdate: (id: string, updates: Partial<GoalSubtask>) => void;
+  onDelete: (id: string) => void;
+  onCreateTask: (subtask: GoalSubtask, goalTitle: string) => void;
+}) {
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    onAdd(goalId, newName.trim());
+    setNewName('');
+  };
+
+  const handleSaveEdit = (id: string) => {
+    if (!editingName.trim()) return;
+    onUpdate(id, { name: editingName.trim() });
+    setEditingId(null);
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/50 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+      <p className="text-xs font-medium text-muted-foreground mb-2">Subtasks</p>
+      
+      {subtasks.map((st) => (
+        <div key={st.id} className="flex items-center gap-2 group/st">
+          <Checkbox
+            checked={st.completed}
+            onCheckedChange={(checked) => onUpdate(st.id, { completed: !!checked })}
+            className="h-3.5 w-3.5"
+          />
+          {editingId === st.id ? (
+            <div className="flex items-center gap-1 flex-1">
+              <Input
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(st.id)}
+                className="h-6 text-xs bg-secondary/50 border-border"
+                autoFocus
+              />
+              <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleSaveEdit(st.id)}>
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setEditingId(null)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <span className={cn("text-xs flex-1 truncate", st.completed && "line-through text-muted-foreground")}>
+                {st.name}
+              </span>
+              <div className="hidden group-hover/st:flex items-center gap-0.5">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5"
+                  title="Create task from this"
+                  onClick={() => onCreateTask(st, goalTitle)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5"
+                  onClick={() => { setEditingId(st.id); setEditingName(st.name); }}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5 text-destructive hover:text-destructive"
+                  onClick={() => onDelete(st.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+
+      {/* Add new subtask inline */}
+      <div className="flex items-center gap-1 mt-1">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          placeholder="Add subtask..."
+          className="h-6 text-xs bg-secondary/50 border-border"
+        />
+        <Button size="icon" variant="ghost" className="h-5 w-5 shrink-0" onClick={handleAdd} disabled={!newName.trim()}>
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function GoalCards({ goals, subtasks, onEditGoal, onAddGoal, onAddSubtask, onUpdateSubtask, onDeleteSubtask, onCreateTaskFromSubtask }: GoalCardsProps) {
+  const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (goalId: string) => {
+    setExpandedGoals(prev => {
+      const next = new Set(prev);
+      if (next.has(goalId)) next.delete(goalId);
+      else next.add(goalId);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -65,20 +200,33 @@ export function GoalCards({ goals, onEditGoal, onAddGoal }: GoalCardsProps) {
           const progressColor = getProgressColor(goal.currentProgress, goal.targetValue);
           const IconComponent = GOAL_ICONS[goal.title] || Clock;
           const colors = GOAL_COLORS[goal.title] || { icon: 'text-chart-blue', bg: 'bg-chart-blue/10' };
+          const goalSubtasks = subtasks.filter(s => s.goalId === goal.id);
+          const isExpanded = expandedGoals.has(goal.id);
           
           return (
             <div 
               key={goal.id} 
               className="glass-card rounded-xl p-5 animate-fade-in group relative cursor-pointer hover:border-primary/30 transition-all"
-              onClick={() => onEditGoal(goal)}
             >
               {/* Edit indicator */}
-              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Edit2 className="h-4 w-4 text-muted-foreground" />
+              <div className="absolute top-3 right-3 flex items-center gap-1">
+                <button 
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+                  onClick={(e) => { e.stopPropagation(); toggleExpand(goal.id); }}
+                  title={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+                >
+                  {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </button>
+                <button 
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+                  onClick={(e) => { e.stopPropagation(); onEditGoal(goal); }}
+                >
+                  <Edit2 className="h-4 w-4 text-muted-foreground" />
+                </button>
               </div>
               
               {/* Header with icon and status */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-3" onClick={() => onEditGoal(goal)}>
                 <div className={cn("p-2.5 rounded-lg", colors.bg)}>
                   <IconComponent className={cn("h-5 w-5", colors.icon)} />
                 </div>
@@ -89,7 +237,7 @@ export function GoalCards({ goals, onEditGoal, onAddGoal }: GoalCardsProps) {
               </div>
               
               {/* Title and description */}
-              <h4 className="font-semibold text-sm mb-1">{goal.title}</h4>
+              <h4 className="font-semibold text-sm mb-1" onClick={() => onEditGoal(goal)}>{goal.title}</h4>
               <p className="text-xs text-muted-foreground mb-4 line-clamp-1">
                 {goal.description || `Track your ${goal.title.toLowerCase()}`}
               </p>
@@ -117,6 +265,29 @@ export function GoalCards({ goals, onEditGoal, onAddGoal }: GoalCardsProps) {
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
+
+              {/* Subtask count indicator (collapsed) */}
+              {!isExpanded && goalSubtasks.length > 0 && (
+                <button 
+                  className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={(e) => { e.stopPropagation(); toggleExpand(goal.id); }}
+                >
+                  {goalSubtasks.filter(s => s.completed).length}/{goalSubtasks.length} subtasks done
+                </button>
+              )}
+
+              {/* Expanded subtasks */}
+              {isExpanded && (
+                <SubtaskList
+                  goalId={goal.id}
+                  goalTitle={goal.title}
+                  subtasks={goalSubtasks}
+                  onAdd={onAddSubtask}
+                  onUpdate={onUpdateSubtask}
+                  onDelete={onDeleteSubtask}
+                  onCreateTask={onCreateTaskFromSubtask}
+                />
+              )}
             </div>
           );
         })}

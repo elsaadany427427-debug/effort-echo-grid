@@ -6,11 +6,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+export interface GoalSubtask {
+  id: string;
+  goalId: string;
+  name: string;
+  completed: boolean;
+}
+
 export function useDashboardData() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<GoalWithMeta[]>([]);
+  const [subtasks, setSubtasks] = useState<GoalSubtask[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [projects, setProjects] = useState<string[]>([]);
   const [targetDate, setTargetDateState] = useState<string>('2026-06-01');
@@ -23,9 +31,10 @@ export function useDashboardData() {
 
     const loadData = async () => {
       try {
-        const [tasksRes, goalsRes, categoriesRes, projectsRes, profileRes] = await Promise.all([
+        const [tasksRes, goalsRes, subtasksRes, categoriesRes, projectsRes, profileRes] = await Promise.all([
           supabase.from('tasks').select('*').eq('user_id', user.id).order('date', { ascending: false }),
           supabase.from('goals').select('*').eq('user_id', user.id),
+          supabase.from('goal_subtasks').select('*').eq('user_id', user.id),
           supabase.from('categories').select('*').eq('user_id', user.id),
           supabase.from('projects').select('*').eq('user_id', user.id),
           supabase.from('profiles').select('target_date').eq('id', user.id).single(),
@@ -55,6 +64,15 @@ export function useDashboardData() {
             unit: g.unit as 'hours' | 'stories' | '%',
             description: g.description || '',
             linkedCategory: g.linked_category || 'all'
+          })));
+        }
+
+        if (subtasksRes.data) {
+          setSubtasks(subtasksRes.data.map((s: any) => ({
+            id: s.id,
+            goalId: s.goal_id,
+            name: s.name,
+            completed: s.completed,
           })));
         }
 
@@ -496,9 +514,61 @@ export function useDashboardData() {
     return alerts;
   }, [tasks]);
 
+  // Subtask CRUD
+  const addSubtask = useCallback(async (goalId: string, name: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('goal_subtasks')
+      .insert({ goal_id: goalId, user_id: user.id, name })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: 'Error adding subtask', variant: 'destructive' });
+      return;
+    }
+
+    if (data) {
+      setSubtasks(prev => [...prev, {
+        id: (data as any).id,
+        goalId: (data as any).goal_id,
+        name: (data as any).name,
+        completed: (data as any).completed,
+      }]);
+    }
+  }, [user, toast]);
+
+  const updateSubtask = useCallback(async (id: string, updates: Partial<GoalSubtask>) => {
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+
+    const { error } = await supabase.from('goal_subtasks').update(dbUpdates).eq('id', id);
+
+    if (error) {
+      toast({ title: 'Error updating subtask', variant: 'destructive' });
+      return;
+    }
+
+    setSubtasks(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  }, [toast]);
+
+  const deleteSubtask = useCallback(async (id: string) => {
+    const { error } = await supabase.from('goal_subtasks').delete().eq('id', id);
+
+    if (error) {
+      toast({ title: 'Error deleting subtask', variant: 'destructive' });
+      return;
+    }
+
+    setSubtasks(prev => prev.filter(s => s.id !== id));
+  }, [toast]);
+
   return {
     tasks,
     goals,
+    subtasks,
     categories,
     projects,
     targetDate,
@@ -510,6 +580,9 @@ export function useDashboardData() {
     deleteTask,
     saveGoal,
     deleteGoal,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
     saveCategory,
     deleteCategory,
     saveProject,
