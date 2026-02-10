@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Settings, Bell } from 'lucide-react';
+import { Plus, Settings, Bell, FolderOpen } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
@@ -9,6 +9,7 @@ import { TaskTable } from '@/components/dashboard/TaskTable';
 import { TaskModal } from '@/components/dashboard/TaskModal';
 import { GoalModal, GoalWithMeta } from '@/components/dashboard/GoalModal';
 import { CategoryModal } from '@/components/dashboard/CategoryModal';
+import { ProjectModal } from '@/components/dashboard/ProjectModal';
 import { DashboardFiltersComponent } from '@/components/dashboard/DashboardFilters';
 import { ProjectHeader } from '@/components/dashboard/ProjectHeader';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ const Index = () => {
     deleteGoal,
     saveCategory,
     deleteCategory,
+    saveProject,
+    deleteProject,
     updateTargetDate,
     computeMetrics,
     computeGoalProgress,
@@ -42,6 +45,7 @@ const Index = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingGoal, setEditingGoal] = useState<GoalWithMeta | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
 
   if (!isLoaded) {
     return (
@@ -122,6 +126,14 @@ const Index = () => {
             >
               <Settings className="h-4 w-4" />
             </Button>
+            <Button 
+              onClick={() => setProjectModalOpen(true)} 
+              variant="outline" 
+              size="icon"
+              title="Manage Projects"
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
             <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25">
               <Plus className="h-4 w-4 mr-2" />
               Add Task
@@ -186,6 +198,15 @@ const Index = () => {
           categories={categories}
           onSaveCategory={saveCategory}
           onDeleteCategory={deleteCategory}
+        />
+
+        {/* Project Modal */}
+        <ProjectModal
+          open={projectModalOpen}
+          onClose={() => setProjectModalOpen(false)}
+          projects={projects}
+          onSaveProject={saveProject}
+          onDeleteProject={deleteProject}
         />
       </div>
     </div>
