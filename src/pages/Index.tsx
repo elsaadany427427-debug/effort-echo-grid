@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Settings, Bell, FolderOpen } from 'lucide-react';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useDashboardData, GoalSubtask } from '@/hooks/useDashboardData';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { GoalCards } from '@/components/dashboard/GoalCards';
@@ -20,6 +20,7 @@ const Index = () => {
     tasks,
     categories,
     projects,
+    subtasks,
     targetDate,
     filters,
     setFilters,
@@ -29,6 +30,9 @@ const Index = () => {
     deleteTask,
     saveGoal,
     deleteGoal,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
     saveCategory,
     deleteCategory,
     saveProject,
@@ -94,6 +98,22 @@ const Index = () => {
     setGoalModalOpen(true);
   };
 
+  const handleCreateTaskFromSubtask = (subtask: GoalSubtask, goalTitle: string) => {
+    setEditingTask(null);
+    setTaskModalOpen(true);
+    // Pre-fill will happen through the task modal's default values
+    // We use a slight delay to let the modal open, then we could pass initial data
+    // For simplicity, we open the modal with the subtask name pre-filled
+    setTimeout(() => {
+      const nameInput = document.querySelector<HTMLInputElement>('#task-name');
+      if (nameInput) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        nativeInputValueSetter?.call(nameInput, subtask.name);
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -154,9 +174,14 @@ const Index = () => {
 
         {/* Goal Cards */}
         <GoalCards 
-          goals={goalsWithProgress} 
+          goals={goalsWithProgress}
+          subtasks={subtasks}
           onEditGoal={handleEditGoal}
           onAddGoal={handleAddGoal}
+          onAddSubtask={addSubtask}
+          onUpdateSubtask={updateSubtask}
+          onDeleteSubtask={deleteSubtask}
+          onCreateTaskFromSubtask={handleCreateTaskFromSubtask}
         />
 
         {/* Charts - now using filtered tasks */}
