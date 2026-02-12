@@ -1,29 +1,44 @@
 
-# Plan: Add Project Management Modal (like Categories)
 
-Create a "Manage Projects" modal identical to the existing CategoryModal, allowing users to add, edit, and delete projects. Wire it into the dashboard with a dedicated button.
+# Plan: Assign Existing Tasks to Subtasks
+
+## Problem
+Subtasks and tasks are completely disconnected in the database. You can only create a *new* task from a subtask, but cannot link an existing task to one.
+
+## Solution
+Add a `subtask_id` foreign key on the `tasks` table so any task can optionally be linked to a subtask. Then add UI to assign/unassign existing tasks from subtask rows.
+
+---
 
 ## Changes
 
-### 1. Create `src/components/dashboard/ProjectModal.tsx`
-- Clone the `CategoryModal` component, replacing "Category" with "Project" throughout
-- Same props pattern: `projects: string[]`, `onSaveProject`, `onDeleteProject`
-- Same UI: list of projects with edit/delete buttons, inline editing, add button, delete confirmation dialog
-- Use `FolderOpen` icon instead of `Tag`
+### 1. Database Migration
+- Add `subtask_id` (uuid, nullable) column to the `tasks` table
+- This allows any task to optionally reference a subtask
 
-### 2. Update `src/pages/Index.tsx`
-- Import `ProjectModal`
-- Add `projectModalOpen` state
-- Add a new Settings-style button (e.g., `FolderOpen` icon) next to the existing Categories settings button
-- Render `ProjectModal` with `projects`, `saveProject`, and `deleteProject` from `useDashboardData`
+### 2. Update Types and Hook
+- Add `subtaskId` to the `Task` type in `src/types/dashboard.ts`
+- Update `useDashboardData.ts` to read/write `subtask_id` in all task CRUD operations
+- Add an `assignTaskToSubtask(taskId, subtaskId)` helper function
 
-### 3. No backend changes needed
-- `saveProject` and `deleteProject` functions already exist in `useDashboardData.ts`
-- The `projects` table with RLS is already in place
-- These functions are already returned from the hook but not wired up in `Index.tsx`
+### 3. Update Subtask UI (`GoalCards.tsx`)
+- Add a "Link task" button (chain/link icon) on each subtask row (next to the existing +, pencil, trash icons)
+- Clicking it opens a small popover/dropdown listing unassigned tasks for the user to pick from
+- Once assigned, show the linked task name beneath the subtask with an "unlink" option
+- The existing "+" (create task) button stays as-is for creating new tasks
 
-## Summary
+### 4. Visual Indicator
+- Show a small badge or linked task name under each subtask that has an assigned task
+- Allow unlinking by clicking an "x" next to the linked task name
+
+---
+
+## File Changes Summary
+
 | Action | File | What |
 |--------|------|------|
-| Create | `src/components/dashboard/ProjectModal.tsx` | New modal component mirroring CategoryModal |
-| Modify | `src/pages/Index.tsx` | Add project modal state, button, and render |
+| Migration | SQL | Add `subtask_id` uuid nullable column to `tasks` |
+| Modify | `src/types/dashboard.ts` | Add `subtaskId?: string` to Task |
+| Modify | `src/hooks/useDashboardData.ts` | Handle subtask_id in CRUD, add assign/unassign helpers |
+| Modify | `src/components/dashboard/GoalCards.tsx` | Add link-task popover and linked-task display on subtasks |
+
