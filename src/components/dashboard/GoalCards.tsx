@@ -1,21 +1,26 @@
 import { useState } from 'react';
-import { Clock, Users, BookOpen, Zap, Award, Shield, Code, TrendingDown, Edit2, Plus, Check, X, Trash2, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Users, BookOpen, Zap, Award, Shield, Code, TrendingDown, Edit2, Plus, Check, X, Trash2, Pencil, ChevronDown, ChevronUp, Link2, Unlink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoalWithMeta } from './GoalModal';
 import { GoalSubtask } from '@/hooks/useDashboardData';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Task } from '@/types/dashboard';
 
 interface GoalCardsProps {
   goals: GoalWithMeta[];
   subtasks: GoalSubtask[];
+  tasks: Task[];
   onEditGoal: (goal: GoalWithMeta) => void;
   onAddGoal: () => void;
   onAddSubtask: (goalId: string, name: string) => void;
   onUpdateSubtask: (id: string, updates: Partial<GoalSubtask>) => void;
   onDeleteSubtask: (id: string) => void;
   onCreateTaskFromSubtask: (subtask: GoalSubtask, goalTitle: string) => void;
+  onAssignTask: (taskId: string, subtaskId: string) => void;
+  onUnassignTask: (taskId: string) => void;
 }
 
 const GOAL_ICONS: Record<string, typeof Clock> = {
@@ -58,18 +63,24 @@ function SubtaskList({
   goalId, 
   goalTitle,
   subtasks, 
+  tasks,
   onAdd, 
   onUpdate, 
   onDelete, 
-  onCreateTask 
+  onCreateTask,
+  onAssignTask,
+  onUnassignTask,
 }: { 
   goalId: string; 
   goalTitle: string;
   subtasks: GoalSubtask[]; 
+  tasks: Task[];
   onAdd: (goalId: string, name: string) => void;
   onUpdate: (id: string, updates: Partial<GoalSubtask>) => void;
   onDelete: (id: string) => void;
   onCreateTask: (subtask: GoalSubtask, goalTitle: string) => void;
+  onAssignTask: (taskId: string, subtaskId: string) => void;
+  onUnassignTask: (taskId: string) => void;
 }) {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -91,65 +102,104 @@ function SubtaskList({
     <div className="mt-3 pt-3 border-t border-border/50 space-y-1.5" onClick={(e) => e.stopPropagation()}>
       <p className="text-xs font-medium text-muted-foreground mb-2">Subtasks</p>
       
-      {subtasks.map((st) => (
-        <div key={st.id} className="flex items-center gap-2 group/st">
-          <Checkbox
-            checked={st.completed}
-            onCheckedChange={(checked) => onUpdate(st.id, { completed: !!checked })}
-            className="h-3.5 w-3.5"
-          />
-          {editingId === st.id ? (
-            <div className="flex items-center gap-1 flex-1">
-              <Input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(st.id)}
-                className="h-6 text-xs bg-secondary/50 border-border"
-                autoFocus
+      {subtasks.map((st) => {
+        const linkedTask = tasks.find(t => t.subtaskId === st.id);
+        return (
+          <div key={st.id} className="space-y-1">
+            <div className="flex items-center gap-2 group/st">
+              <Checkbox
+                checked={st.completed}
+                onCheckedChange={(checked) => onUpdate(st.id, { completed: !!checked })}
+                className="h-3.5 w-3.5"
               />
-              <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleSaveEdit(st.id)}>
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setEditingId(null)}>
-                <X className="h-3 w-3" />
-              </Button>
+              {editingId === st.id ? (
+                <div className="flex items-center gap-1 flex-1">
+                  <Input
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(st.id)}
+                    className="h-6 text-xs bg-secondary/50 border-border"
+                    autoFocus
+                  />
+                  <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleSaveEdit(st.id)}>
+                    <Check className="h-3 w-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setEditingId(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <span className={cn("text-xs flex-1 truncate", st.completed && "line-through text-muted-foreground")}>
+                    {st.name}
+                  </span>
+                  <div className="hidden group-hover/st:flex items-center gap-0.5">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-5 w-5" title="Link existing task">
+                          <Link2 className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2" align="start">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Assign a task</p>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {tasks.filter(t => !t.subtaskId).length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-2 text-center">No unassigned tasks</p>
+                          ) : (
+                            tasks.filter(t => !t.subtaskId).map(t => (
+                              <button
+                                key={t.id}
+                                className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-secondary truncate"
+                                onClick={() => onAssignTask(t.id, st.id)}
+                              >
+                                {t.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-5 w-5"
+                      title="Create task from this"
+                      onClick={() => onCreateTask(st, goalTitle)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-5 w-5"
+                      onClick={() => { setEditingId(st.id); setEditingName(st.name); }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-5 w-5 text-destructive hover:text-destructive"
+                      onClick={() => onDelete(st.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              <span className={cn("text-xs flex-1 truncate", st.completed && "line-through text-muted-foreground")}>
-                {st.name}
-              </span>
-              <div className="hidden group-hover/st:flex items-center gap-0.5">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-5 w-5"
-                  title="Create task from this"
-                  onClick={() => onCreateTask(st, goalTitle)}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-5 w-5"
-                  onClick={() => { setEditingId(st.id); setEditingName(st.name); }}
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-5 w-5 text-destructive hover:text-destructive"
-                  onClick={() => onDelete(st.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+            {linkedTask && (
+              <div className="flex items-center gap-1 ml-6 text-xs text-muted-foreground">
+                <Link2 className="h-3 w-3 text-primary" />
+                <span className="truncate">{linkedTask.name}</span>
+                <button onClick={() => onUnassignTask(linkedTask.id)} className="hover:text-foreground ml-auto shrink-0">
+                  <X className="h-3 w-3" />
+                </button>
               </div>
-            </>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        );
+      })}
 
       {/* Add new subtask inline */}
       <div className="flex items-center gap-1 mt-1">
@@ -168,7 +218,7 @@ function SubtaskList({
   );
 }
 
-export function GoalCards({ goals, subtasks, onEditGoal, onAddGoal, onAddSubtask, onUpdateSubtask, onDeleteSubtask, onCreateTaskFromSubtask }: GoalCardsProps) {
+export function GoalCards({ goals, subtasks, tasks, onEditGoal, onAddGoal, onAddSubtask, onUpdateSubtask, onDeleteSubtask, onCreateTaskFromSubtask, onAssignTask, onUnassignTask }: GoalCardsProps) {
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
 
   const toggleExpand = (goalId: string) => {
@@ -282,10 +332,13 @@ export function GoalCards({ goals, subtasks, onEditGoal, onAddGoal, onAddSubtask
                   goalId={goal.id}
                   goalTitle={goal.title}
                   subtasks={goalSubtasks}
+                  tasks={tasks}
                   onAdd={onAddSubtask}
                   onUpdate={onUpdateSubtask}
                   onDelete={onDeleteSubtask}
                   onCreateTask={onCreateTaskFromSubtask}
+                  onAssignTask={onAssignTask}
+                  onUnassignTask={onUnassignTask}
                 />
               )}
             </div>

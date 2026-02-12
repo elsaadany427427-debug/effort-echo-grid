@@ -52,6 +52,7 @@ export function useDashboardData() {
             outcome: t.outcome,
             completed: t.completed,
             projectName: (t as any).project_name || '',
+            subtaskId: (t as any).subtask_id || undefined,
           })));
         }
 
@@ -169,6 +170,7 @@ export function useDashboardData() {
         outcome: data.outcome,
         completed: data.completed,
         projectName: (data as any).project_name || '',
+        subtaskId: (data as any).subtask_id || undefined,
       }, ...prev]);
     }
   }, [user, toast]);
@@ -208,6 +210,7 @@ export function useDashboardData() {
         outcome: d.outcome,
         completed: d.completed,
         projectName: (d as any).project_name || '',
+        subtaskId: (d as any).subtask_id || undefined,
       }));
       setTasks(prev => [...newTasks, ...prev]);
       return newTasks.length;
@@ -226,6 +229,7 @@ export function useDashboardData() {
     if (updates.outcome !== undefined) dbUpdates.outcome = updates.outcome;
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
     if (updates.projectName !== undefined) dbUpdates.project_name = updates.projectName;
+    if (updates.subtaskId !== undefined) dbUpdates.subtask_id = updates.subtaskId;
 
     const { error } = await supabase.from('tasks').update(dbUpdates).eq('id', id);
 
@@ -565,6 +569,25 @@ export function useDashboardData() {
     setSubtasks(prev => prev.filter(s => s.id !== id));
   }, [toast]);
 
+  // Assign/unassign task to subtask
+  const assignTaskToSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    const { error } = await supabase.from('tasks').update({ subtask_id: subtaskId } as any).eq('id', taskId);
+    if (error) {
+      toast({ title: 'Error linking task', variant: 'destructive' });
+      return;
+    }
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, subtaskId } : t));
+  }, [toast]);
+
+  const unassignTask = useCallback(async (taskId: string) => {
+    const { error } = await supabase.from('tasks').update({ subtask_id: null } as any).eq('id', taskId);
+    if (error) {
+      toast({ title: 'Error unlinking task', variant: 'destructive' });
+      return;
+    }
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, subtaskId: undefined } : t));
+  }, [toast]);
+
   return {
     tasks,
     goals,
@@ -583,6 +606,8 @@ export function useDashboardData() {
     addSubtask,
     updateSubtask,
     deleteSubtask,
+    assignTaskToSubtask,
+    unassignTask,
     saveCategory,
     deleteCategory,
     saveProject,

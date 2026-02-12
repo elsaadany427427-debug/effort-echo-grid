@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN subtask_id uuid REFERENCES public.goal_subtasks(id) ON DELETE SET NULL;

@@ -9,6 +9,7 @@ export interface Task {
   outcome: string;
   completed: boolean;
   projectName: string;
+  subtaskId?: string;
 }
 
 export interface Goal {

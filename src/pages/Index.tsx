@@ -33,6 +33,8 @@ const Index = () => {
     addSubtask,
     updateSubtask,
     deleteSubtask,
+    assignTaskToSubtask,
+    unassignTask,
     saveCategory,
     deleteCategory,
     saveProject,
@@ -176,12 +178,15 @@ const Index = () => {
         <GoalCards 
           goals={goalsWithProgress}
           subtasks={subtasks}
+          tasks={tasks}
           onEditGoal={handleEditGoal}
           onAddGoal={handleAddGoal}
           onAddSubtask={addSubtask}
           onUpdateSubtask={updateSubtask}
           onDeleteSubtask={deleteSubtask}
           onCreateTaskFromSubtask={handleCreateTaskFromSubtask}
+          onAssignTask={assignTaskToSubtask}
+          onUnassignTask={unassignTask}
         />
 
         {/* Charts - now using filtered tasks */}
