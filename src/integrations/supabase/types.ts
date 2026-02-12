@@ -199,6 +199,7 @@ export type Database = {
           outcome: string
           ownership: boolean
           project_name: string
+          subtask_id: string | null
           updated_at: string
           user_id: string
         }
@@ -214,6 +215,7 @@ export type Database = {
           outcome?: string
           ownership?: boolean
           project_name?: string
+          subtask_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -229,10 +231,18 @@ export type Database = {
           outcome?: string
           ownership?: boolean
           project_name?: string
+          subtask_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_subtask_id_fkey"
+            columns: ["subtask_id"]
+            isOneToOne: false
+            referencedRelation: "goal_subtasks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_user_id_fkey"
             columns: ["user_id"]
